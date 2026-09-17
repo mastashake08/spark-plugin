@@ -85,7 +85,7 @@ import { createSparkPlugin } from 'spark-mls-client/vue';
 import App from './App.vue';
 
 createApp(App)
-  .use(createSparkPlugin({ accessToken: import.meta.env.VITE_SPARK_ACCESS_TOKEN, userAgent: 'YourBrokerage IDX/1.0' }))
+  .use(createSparkPlugin({ accessToken: process.env.SPARK_ACCESS_TOKEN!, userAgent: 'YourBrokerage IDX/1.0' }))
   .mount('#app');
 ```
 
@@ -121,7 +121,7 @@ import { SparkProvider } from 'spark-mls-client/react';
 
 export function App() {
   return (
-    <SparkProvider client={{ accessToken: import.meta.env.VITE_SPARK_ACCESS_TOKEN, userAgent: 'YourBrokerage IDX/1.0' }}>
+    <SparkProvider client={{ accessToken: process.env.SPARK_ACCESS_TOKEN!, userAgent: 'YourBrokerage IDX/1.0' }}>
       <ListingSearch />
     </SparkProvider>
   );
