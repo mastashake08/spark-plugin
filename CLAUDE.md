@@ -27,10 +27,16 @@ This is `spark-mls-client`, an npm package wrapping the Spark Platform (Flexmls)
 
 ### Core client (`src/core/`)
 
-- `client.ts` — `SparkClient` is the only stateful object. It holds the access token, base URL, `userAgent`, and injected `fetch`. Resource methods live as readonly object properties (e.g. `client.listings.search/get/media`) rather than separate classes; add new Spark resources (open houses, offices, agents) following that pattern, or reach them ad hoc via `client.request(path, options)`.
+- `client.ts` — `SparkClient` is the only stateful object. It holds the access token, base URL, `userAgent`, and injected `fetch`. Resource methods live as readonly object properties (`client.listings.search/get/media/openHouses`, `client.accounts.search/get`, `client.agents.*`, `client.offices.*`) rather than separate classes; add new Spark resources following that pattern, or reach them ad hoc via `client.request(path, options)`.
 - `http.ts` — `sparkFetch` is the single place that calls `fetch`, parses the Spark envelope, and throws `SparkApiError` on transport failure or `D.Success === false`. All resource methods route through this — do not call `fetch` directly elsewhere.
-- `types.ts` — models Spark's response envelope (`SparkEnvelope<T>` → `D.Results`/`D.Pagination`/`D.Success`) and the `SparkResource<Fields>` shape (`Id` + `StandardFields` + `NonStandardFields`). `SparkListingFields`/`SparkMediaFields` are intentionally partial, commonly-used subsets — client methods are generic (`client.listings.search<MyFields>(...)`) so consumers extend them for their MLS's actual RESO field set instead of this package trying to model every field.
+- `types.ts` — models Spark's response envelope (`SparkEnvelope<T>` → `D.Results`/`D.Pagination`/`D.Success`) plus **two distinct record shapes**, confirmed against the live API (not assumed): `SparkResource<Fields>` (`Id` + `StandardFields` + `NonStandardFields` — used by `listings`) and `SparkFlatResource<Fields>` (fields flat on the record, no wrapper — used by `media`, `openHouses`, `accounts`). Don't assume a new resource follows either shape without checking a real response; Spark is inconsistent about this across resources. `SparkListingFields`/`SparkMediaFields`/`SparkAccountFields`/`SparkOpenHouseFields` are intentionally partial, commonly-used subsets — client methods are generic (`client.listings.search<MyFields>(...)`) so consumers extend them for their MLS's actual RESO field set instead of this package trying to model every field.
 - `errors.ts` — `SparkApiError` carries `status`/`code`/`details`/`requestId` pulled from the Spark error envelope.
+
+### Resource path gotchas (learned by probing the live API, not just docs)
+
+- Agents and offices are **not** separate `/agents`/`/offices` endpoints (those 404) — both are `/accounts` records distinguished by `UserType` (`'Member'` for agents, `'Office'` for offices). `client.agents`/`client.offices` are thin filtered wrappers over `client.accounts` (see `mergeFilters` in `client.ts`).
+- Open houses are listing-scoped: `/listings/{id}/openhouses`, not a standalone `/openhouses` collection (that path exists but returned 403 on a standard IDX dev key — permission-gated, likely for broker-tour-style bulk access).
+- `media`/`accounts`/`openHouses` all return flat records; only `listings` wraps fields in `StandardFields`. This was verified with real API calls — trust the live response shape over assumptions when adding new resources.
 
 ### Auth model
 

@@ -7,7 +7,11 @@ export type {
   SparkPagination,
   SparkResource,
   SparkPage,
+  SparkFlatResource,
+  SparkFlatPage,
   SparkListParams,
   SparkListingFields,
   SparkMediaFields,
+  SparkAccountFields,
+  SparkOpenHouseFields,
 } from './core/types.js';

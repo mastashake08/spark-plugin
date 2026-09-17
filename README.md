@@ -36,13 +36,20 @@ const { results, pagination } = await client.listings.search({
 
 const listing = await client.listings.get(results[0].Id);
 const photos = await client.listings.media(results[0].Id);
+const openHouses = await client.listings.openHouses(results[0].Id);
+
+const agents = await client.agents.search({ limit: 10 });
+const offices = await client.offices.search({ limit: 10 });
 ```
 
-Any Spark resource not explicitly wrapped (open houses, offices, agents, etc.) is reachable via the generic escape
+Agents and offices are both `/accounts` records under the hood, distinguished by `UserType`. `client.agents`/
+`client.offices` are filtered convenience wrappers — use `client.accounts.search(...)` directly for other user types.
+
+Any Spark resource not explicitly wrapped (neighborhoods, saved searches, etc.) is reachable via the generic escape
 hatch:
 
 ```ts
-const openHouses = await client.request('/openhouses', { query: { _filter: "ListingId Eq '20230001234'" } });
+const neighborhoods = await client.request('neighborhoods', { query: { _limit: 25 } });
 ```
 
 ## Vue 3

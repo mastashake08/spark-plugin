@@ -1,8 +1,12 @@
 import { sparkFetch, type FetchLike, type RequestOptions } from './http.js';
 import type {
+  SparkAccountFields,
+  SparkFlatPage,
+  SparkFlatResource,
   SparkListParams,
   SparkListingFields,
   SparkMediaFields,
+  SparkOpenHouseFields,
   SparkPage,
   SparkResource,
 } from './types.js';
@@ -25,6 +29,11 @@ export interface SparkClientOptions {
 function toDelimited(value: string | string[] | undefined, separator: string): string | undefined {
   if (value === undefined) return undefined;
   return Array.isArray(value) ? value.join(separator) : value;
+}
+
+function mergeFilters(base: string, extra?: string | string[]): string | string[] {
+  if (!extra) return base;
+  return Array.isArray(extra) ? [base, ...extra] : [base, extra];
 }
 
 function listParamsToQuery(params: SparkListParams = {}): RequestOptions['query'] {
@@ -108,6 +117,34 @@ export class SparkClient {
     };
   }
 
+  /** Like `list`, but for resources (e.g. media/photos) whose fields come back flat instead of under `StandardFields`. */
+  private async listFlat<Fields extends Record<string, unknown>>(
+    path: string,
+    params?: SparkListParams,
+  ): Promise<SparkFlatPage<Fields>> {
+    const { envelope } = await sparkFetch<Array<SparkFlatResource<Fields>>>(this.fetchImpl, this.baseUrl, path, {
+      query: listParamsToQuery(params),
+      headers: this.headers(),
+    });
+    return {
+      results: envelope.D.Results ?? [],
+      pagination: envelope.D.Pagination,
+      requestId: envelope.D.RequestId,
+    };
+  }
+
+  /** Single-record fetch for flat resources (accounts). Spark still wraps the result in a one-element array. */
+  private async getFlatOne<Fields extends Record<string, unknown>>(path: string): Promise<SparkFlatResource<Fields>> {
+    const { envelope } = await sparkFetch<Array<SparkFlatResource<Fields>>>(this.fetchImpl, this.baseUrl, path, {
+      headers: this.headers(),
+    });
+    const result = envelope.D.Results?.[0];
+    if (!result) {
+      throw new Error(`Spark API returned no record for "${path}".`);
+    }
+    return result;
+  }
+
   readonly listings = {
     /** GET /listings */
     search: <Fields extends Record<string, unknown> = SparkListingFields>(params?: SparkListParams) =>
@@ -139,6 +176,42 @@ export class SparkClient {
 
     /** GET /listings/{id}/photos */
     media: <Fields extends Record<string, unknown> = SparkMediaFields>(id: string) =>
-      this.list<Fields>(`listings/${encodeURIComponent(id)}/photos`),
+      this.listFlat<Fields>(`listings/${encodeURIComponent(id)}/photos`),
+
+    /** GET /listings/{id}/openhouses */
+    openHouses: <Fields extends Record<string, unknown> = SparkOpenHouseFields>(id: string) =>
+      this.listFlat<Fields>(`listings/${encodeURIComponent(id)}/openhouses`),
+  };
+
+  /**
+   * Agents and offices are both `/accounts` records, distinguished by
+   * `UserType` ('Member' for agents, 'Office' for offices). Use this
+   * directly for other user types (e.g. 'Company'); `agents`/`offices`
+   * below are filtered convenience wrappers over the same resource.
+   */
+  readonly accounts = {
+    /** GET /accounts */
+    search: <Fields extends Record<string, unknown> = SparkAccountFields>(params?: SparkListParams) =>
+      this.listFlat<Fields>('accounts', params),
+
+    /** GET /accounts/{id} */
+    get: <Fields extends Record<string, unknown> = SparkAccountFields>(id: string) =>
+      this.getFlatOne<Fields>(`accounts/${encodeURIComponent(id)}`),
+  };
+
+  readonly agents = {
+    /** GET /accounts?_filter=UserType Eq 'Member' */
+    search: <Fields extends Record<string, unknown> = SparkAccountFields>(params: SparkListParams = {}) =>
+      this.accounts.search<Fields>({ ...params, filter: mergeFilters("UserType Eq 'Member'", params.filter) }),
+
+    get: this.accounts.get,
+  };
+
+  readonly offices = {
+    /** GET /accounts?_filter=UserType Eq 'Office' */
+    search: <Fields extends Record<string, unknown> = SparkAccountFields>(params: SparkListParams = {}) =>
+      this.accounts.search<Fields>({ ...params, filter: mergeFilters("UserType Eq 'Office'", params.filter) }),
+
+    get: this.accounts.get,
   };
 }

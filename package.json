@@ -33,6 +33,7 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
+    "example": "node --env-file=.env examples/vanilla/run.mjs",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
