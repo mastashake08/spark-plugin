@@ -1,6 +1,6 @@
-import { createElement, useEffect, useState } from 'react';
+import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ListingGrid } from 'spark-mls-client/react';
+import { SparkProvider, useSparkListings, ListingGrid } from 'spark-mls-client/react';
 
 const cardClassNames = {
   root: 'listing-card',
@@ -11,32 +11,15 @@ const cardClassNames = {
   status: 'listing-card__status',
 };
 
-// Fetches from this dev server's own /api/listings route (see vite.config.ts),
-// never from Spark directly — the access token stays server-side. This is the
-// same shape a real app's data-fetching would take (an internal API route, a
-// server component, etc.) feeding an already-fetched page into ListingGrid.
-function useListings() {
-  const [data, setData] = useState();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState();
-
-  useEffect(() => {
-    fetch('/api/listings')
-      .then(async (res) => {
-        const body = await res.json();
-        if (!res.ok) throw new Error(body.error ?? `Request failed with status ${res.status}`);
-        return body;
-      })
-      .then(setData)
-      .catch(setError)
-      .finally(() => setLoading(false));
-  }, []);
-
-  return { data, loading, error };
-}
-
-function App() {
-  const { data, loading, error } = useListings();
+// { baseUrl } builds a browser-safe SparkProxyClient (see SparkProvider's
+// resolveClient) pointed at your backend's Spark proxy API — e.g. a running
+// spark-api-micro instance. It holds the real access token server-side; this
+// app never sees it.
+function Results() {
+  const { data, loading, error } = useSparkListings({
+    filter: "StandardStatus Eq 'Active'",
+    limit: 12,
+  });
 
   return createElement(ListingGrid, {
     listings: data?.results ?? [],
@@ -50,4 +33,6 @@ function App() {
   });
 }
 
-createRoot(document.getElementById('root')).render(createElement(App));
+createRoot(document.getElementById('root')).render(
+  createElement(SparkProvider, { client: { baseUrl: import.meta.env.VITE_SPARK_API_BASE_URL } }, createElement(Results)),
+);

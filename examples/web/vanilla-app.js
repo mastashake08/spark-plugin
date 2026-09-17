@@ -1,16 +1,19 @@
-import { renderListingGrid } from 'spark-mls-client/vanilla';
+import { SparkProxyClient, renderListingGrid } from 'spark-mls-client/vanilla';
 
-// Fetches from this dev server's own /api/listings route (see vite.config.ts),
-// never from Spark directly — the access token stays server-side.
 const root = document.getElementById('app');
 
 try {
-  const res = await fetch('/api/listings');
-  const body = await res.json();
-  if (!res.ok) throw new Error(body.error ?? `Request failed with status ${res.status}`);
+  // Browser-safe: points at your backend's Spark proxy API (e.g. a running
+  // spark-api-micro instance), which holds the real access token server-side.
+  const client = new SparkProxyClient({ baseUrl: import.meta.env.VITE_SPARK_API_BASE_URL });
+
+  const { results } = await client.listings.search({
+    filter: "StandardStatus Eq 'Active'",
+    limit: 12,
+  });
 
   root.replaceChildren(
-    renderListingGrid(body.results, {
+    renderListingGrid(results, {
       classNames: { root: 'listing-grid', grid: 'listing-grid__items' },
       cardOptions: {
         classNames: {

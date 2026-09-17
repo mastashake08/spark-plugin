@@ -108,5 +108,12 @@ export function renderListingGrid<Fields extends Record<string, unknown> = Spark
 }
 
 export type { ListingCardPart } from '../core/format.js';
-export { SparkClient, SparkApiError } from '../index.js';
-export type { SparkClientOptions, SparkListingFields, SparkPage, SparkResource } from '../index.js';
+export { SparkClient, SparkProxyClient, SparkApiError } from '../index.js';
+export type {
+  SparkClientOptions,
+  SparkProxyClientOptions,
+  SparkListingsClient,
+  SparkListingFields,
+  SparkPage,
+  SparkResource,
+} from '../index.js';

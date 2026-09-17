@@ -9,9 +9,10 @@
     <h1>spark-mls-client examples</h1>
     <p>Same ListingGrid/ListingCard components, same data, three different frameworks.</p>
     <p>
-      Each page fetches from this dev server's own <code>/api/listings</code> route (see
-      <code>vite.config.ts</code>), not from Spark directly — Spark's API forbids sending the access token to a
-      browser and has no CORS support, so this dev server stands in for your real backend.
+      Each page uses <code>SparkProxyClient</code>, not <code>SparkClient</code> — it calls
+      <code>VITE_SPARK_API_BASE_URL</code> (your own backend, e.g. a running <code>spark-api-micro</code> instance),
+      never Spark directly. Spark's API forbids sending the access token to a browser and has no CORS support anyway;
+      that backend holds the token server-side and returns plain JSON.
     </p>
     <nav>
       <a href="./react.html">React</a>

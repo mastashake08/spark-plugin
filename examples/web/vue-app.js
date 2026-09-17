@@ -1,5 +1,5 @@
-import { createApp, h, onMounted, ref } from 'vue';
-import { ListingGrid } from 'spark-mls-client/vue';
+import { createApp, h } from 'vue';
+import { createSparkPlugin, useSparkListings, ListingGrid } from 'spark-mls-client/vue';
 
 const cardClassNames = {
   root: 'listing-card',
@@ -10,25 +10,14 @@ const cardClassNames = {
   status: 'listing-card__status',
 };
 
-// Fetches from this dev server's own /api/listings route (see vite.config.ts),
-// never from Spark directly — the access token stays server-side.
-const App = {
+// { baseUrl } builds a browser-safe SparkProxyClient pointed at your
+// backend's Spark proxy API — e.g. a running spark-api-micro instance. It
+// holds the real access token server-side; this app never sees it.
+const Results = {
   setup() {
-    const data = ref();
-    const loading = ref(true);
-    const error = ref();
-
-    onMounted(async () => {
-      try {
-        const res = await fetch('/api/listings');
-        const body = await res.json();
-        if (!res.ok) throw new Error(body.error ?? `Request failed with status ${res.status}`);
-        data.value = body;
-      } catch (err) {
-        error.value = err;
-      } finally {
-        loading.value = false;
-      }
+    const { data, loading, error } = useSparkListings({
+      filter: "StandardStatus Eq 'Active'",
+      limit: 12,
     });
 
     return () =>
@@ -50,4 +39,6 @@ const App = {
   },
 };
 
-createApp(App).mount('#app');
+createApp(Results)
+  .use(createSparkPlugin({ baseUrl: import.meta.env.VITE_SPARK_API_BASE_URL }))
+  .mount('#app');
