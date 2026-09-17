@@ -15,11 +15,25 @@ requires a `X-SparkApi-User-Agent` header identifying your application.
 
 **This is not optional.** Spark's own docs state: *"Never provide your `access_token`, `refresh_token` or
 `client_secret` to a web browser or other end-user agent."* The API also has no CORS support, so a direct
-browser → Spark request fails outright regardless. `SparkClient`, `useSparkListings`/`useSparkClient` (Vue/React),
-and `client.request(...)` are all meant to run somewhere the token is safe — a Node backend, an edge function, SSR,
-React Server Components, etc. For a browser-rendered page, fetch from your own API route instead and feed the
-already-fetched data into `ListingGrid`/`ListingCard` (which take `listings` as a prop/data, not a client) — see
-[Web examples](#web-examples) below for a working proxy pattern.
+browser → Spark request fails outright regardless. `SparkClient` and `client.request(...)` are meant to run somewhere
+the token is safe — a Node backend, an edge function, SSR, React Server Components, etc.
+
+For anything browser-rendered, use **`SparkProxyClient`** instead — same resource shape (`listings`, `accounts`,
+`agents`, `offices`), but it points at *your own backend* (via `baseUrl`) instead of Spark directly, and never
+touches the token:
+
+```ts
+import { SparkProxyClient } from 'spark-mls-client';
+
+const client = new SparkProxyClient({ baseUrl: 'https://api.yourbrokerage.com/api' });
+const { results } = await client.listings.search({ filter: "StandardStatus Eq 'Active'", limit: 25 });
+```
+
+Your backend (a small proxy holding the real `SparkClient` + token — e.g. a Laravel app exposing `/api/listings`
+etc., or any backend built the same way) is what actually calls Spark and returns plain JSON.
+`useSparkListings`/`useSparkClient`/`SparkProvider`/`createSparkPlugin`
+(Vue/React) accept either client — pass `{ accessToken, ... }` for a server-only `SparkClient` or `{ baseUrl, ... }`
+for a browser-safe `SparkProxyClient` — see [Web examples](#web-examples) below for a full working setup.
 
 ## Vanilla JavaScript / TypeScript
 
