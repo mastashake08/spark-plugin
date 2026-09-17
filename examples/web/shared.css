@@ -1,0 +1,54 @@
+/*
+  Demo-only styling so the examples are legible in a browser. The package
+  itself ships no CSS — this is what YOU would write with classNames/styles.
+*/
+body {
+  font-family: system-ui, sans-serif;
+  margin: 2rem;
+  color: #1a1a1a;
+}
+nav a {
+  margin-right: 1rem;
+}
+.error {
+  color: #b00020;
+}
+.listing-grid__items {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.listing-card {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+}
+.listing-card__photo-placeholder {
+  aspect-ratio: 4 / 3;
+  background: #eee;
+}
+.listing-card__price {
+  font-weight: 600;
+  padding: 0.5rem 0.75rem 0;
+}
+.listing-card__address {
+  padding: 0.125rem 0.75rem 0;
+  font-size: 0.9rem;
+}
+.listing-card__meta {
+  padding: 0.125rem 0.75rem 0.75rem;
+  color: #666;
+  font-size: 0.825rem;
+}
+.listing-card__status {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  background: #1a1a1a;
+  color: #fff;
+  font-size: 0.7rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+}

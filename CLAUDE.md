@@ -10,6 +10,8 @@ npm run build        # tsup: emits dist/ as ESM + CJS + .d.ts for all four entry
 npm run dev           # tsup --watch
 npm run typecheck     # tsc --noEmit
 npm test              # node --test; pretest rebuilds dist/ first — tests import from dist, not src
+npm run example        # CLI example (examples/vanilla/run.mjs) against the real Spark API, reads .env
+npm run example:web    # browser examples (examples/web/) via Vite; preexample:web rebuilds dist/ first
 ```
 
 `tests/components.test.mjs` uses `jsdom` (vanilla DOM) and SSR (`react-dom/server`, `vue/server-renderer`) to render the `ListingCard`/`ListingGrid` components for real and assert on the output HTML — not just type-check. It caught a real bug once (Vue emitting stray `class=""`/`style=""` when a part had no override — fixed via `src/vue/utils.ts`'s `partProps`), so prefer extending it over adding assertions elsewhere when touching the component-rendering code.
@@ -51,6 +53,8 @@ Vue's `h()` renders an empty `class=""`/`style=""` attribute in SSR output if yo
 ### Auth model
 
 Spark's IDX use case uses a static **Server Access Token** (no OAuth handshake) sent as `Authorization: Bearer <token>` plus a required `X-SparkApi-User-Agent` header — both are set in `SparkClient`'s private `headers()` method. `SparkClient.setAccessToken()` allows swapping the token at runtime without recreating the client.
+
+**`SparkClient` (and by extension `useSparkListings`/`useSparkClient`/`SparkProvider`) must never run in code shipped to a browser.** This isn't just best practice — confirmed against Spark's own docs and by testing (`examples/web/` originally called Spark directly from the browser and failed with `TypeError: Failed to fetch` in headless Chrome): Spark's docs explicitly say never to give the access token to a browser, and the API sends no CORS headers, so a direct browser → Spark request fails regardless of token validity. `ListingCard`/`ListingGrid` are deliberately presentation-only (take `listings` as data, not a client) specifically so they still work in a browser context when fed data from your own backend. `vite.config.ts`'s `sparkApiProxy` plugin is the reference implementation of that split — a same-origin `/api/listings` route holds the real `SparkClient`, and the three `examples/web/*-app.js` files only ever call `fetch('/api/listings')`. Preserve that split in any future web example; don't reintroduce a browser-side `SparkClient`.
 
 ### Framework bindings (`src/vue/`, `src/react/`)
 

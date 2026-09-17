@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>spark-mls-client examples</title>
+    <link rel="stylesheet" href="./shared.css" />
+  </head>
+  <body>
+    <h1>spark-mls-client examples</h1>
+    <p>Same ListingGrid/ListingCard components, same data, three different frameworks.</p>
+    <p>
+      Each page fetches from this dev server's own <code>/api/listings</code> route (see
+      <code>vite.config.ts</code>), not from Spark directly — Spark's API forbids sending the access token to a
+      browser and has no CORS support, so this dev server stands in for your real backend.
+    </p>
+    <nav>
+      <a href="./react.html">React</a>
+      <a href="./vue.html">Vue</a>
+      <a href="./vanilla.html">Vanilla JS</a>
+    </nav>
+  </body>
+</html>

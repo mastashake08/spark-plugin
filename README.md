@@ -13,9 +13,13 @@ Spark's IDX use case authenticates with a **Server Access Token** (from Settings
 Spark Platform developer account) sent as a `Bearer` token on every request — no OAuth handshake needed. Spark also
 requires a `X-SparkApi-User-Agent` header identifying your application.
 
-Never ship your access token in client-side bundles for a public site — call the Spark API from your own backend (or
-an edge function) and proxy results to the browser, unless the token is scoped for public/read-only IDX display per
-your MLS's data-sharing agreement.
+**This is not optional.** Spark's own docs state: *"Never provide your `access_token`, `refresh_token` or
+`client_secret` to a web browser or other end-user agent."* The API also has no CORS support, so a direct
+browser → Spark request fails outright regardless. `SparkClient`, `useSparkListings`/`useSparkClient` (Vue/React),
+and `client.request(...)` are all meant to run somewhere the token is safe — a Node backend, an edge function, SSR,
+React Server Components, etc. For a browser-rendered page, fetch from your own API route instead and feed the
+already-fetched data into `ListingGrid`/`ListingCard` (which take `listings` as a prop/data, not a client) — see
+[Web examples](#web-examples) below for a working proxy pattern.
 
 ## Vanilla JavaScript / TypeScript
 
@@ -51,6 +55,12 @@ hatch:
 ```ts
 const neighborhoods = await client.request('neighborhoods', { query: { _limit: 25 } });
 ```
+
+The snippets below (Vue 3, React, and the `useSparkListings`/`SparkProvider` examples in "Listing components") call
+Spark directly and are written for brevity — they only work somewhere the token is safe to hold (SSR, an API route, a
+React Server Component). For an actual client-rendered browser page, skip straight to
+[Web examples](#web-examples), which shows the real pattern: your backend calls Spark, the browser calls your
+backend.
 
 ## Vue 3
 
@@ -202,6 +212,22 @@ const grid = renderListingGrid(results, {
 
 document.getElementById('app')!.appendChild(grid);
 ```
+
+## Web examples
+
+`examples/web/` has runnable browser demos of `ListingGrid` in React, Vue, and vanilla JS — same component API, same
+data, three frameworks, side by side:
+
+```
+npm run example:web
+```
+
+Opens a dev server at `http://localhost:5173` with links to each demo. This is also the reference implementation of
+the proxy pattern from the [Auth](#auth) section: `vite.config.ts` adds a same-origin `/api/listings` route that
+holds your `SparkClient`/token server-side (read from `.env`, see `.env.example`) and returns plain JSON; each
+example page just does `fetch('/api/listings')` and passes the result into `ListingGrid` — it never touches
+`SparkClient` or the token at all. Copy that split (an API route backed by `SparkClient`, a frontend that only
+`fetch`es your own route) into your actual app.
 
 ## Typed fields
 
