@@ -126,7 +126,7 @@ export function useSparkListing<Fields extends Record<string, unknown> = SparkLi
 
 export { ListingCard, type ListingCardProps } from './ListingCard.js';
 export { ListingGrid, type ListingGridProps } from './ListingGrid.js';
-export type { ListingCardPart } from '../core/format.js';
+export type { ListingCardPart, ListingCardVisibility } from '../core/format.js';
 
 export { SparkClient, SparkProxyClient, SparkApiError };
 export type { SparkClientOptions } from '../core/client.js';

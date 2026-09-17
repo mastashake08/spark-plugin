@@ -19,6 +19,7 @@ const listing = {
     BathroomsTotalInteger: 2,
     LivingArea: 1800,
     StandardStatus: 'Active',
+    PublicRemarks: 'Great riverfront recreational site.',
   },
 };
 
@@ -29,7 +30,16 @@ test('vanilla renderListingCard applies classNames and formats fields', async ()
   assert.match(card.outerHTML, /\$425,000/);
   assert.match(card.outerHTML, /101 1st DR, GREAT FALLS, MT 59405/);
   assert.match(card.outerHTML, /3 bd · 2 ba · 1,800 sqft/);
+  assert.match(card.outerHTML, /Great riverfront recreational site\./);
   assert.match(card.outerHTML, /<div class="price">/);
+});
+
+test('vanilla renderListingCard hides parts via `show`', async () => {
+  const { renderListingCard } = await import('../dist/vanilla/index.js');
+  const card = renderListingCard(listing, { show: { remarks: false, meta: false } });
+  assert.doesNotMatch(card.outerHTML, /Great riverfront recreational site\./);
+  assert.doesNotMatch(card.outerHTML, /3 bd/);
+  assert.match(card.outerHTML, /\$425,000/);
 });
 
 test('vanilla renderListingGrid renders an empty state without throwing', async () => {
@@ -44,6 +54,12 @@ test('react ListingCard/ListingGrid render via SSR with no unset class="" noise'
   const cardHtml = renderToStaticMarkup(createElement(ListingCard, { listing, className: 'card' }));
   assert.match(cardHtml, /class="card"/);
   assert.match(cardHtml, /\$425,000/);
+  assert.match(cardHtml, /Great riverfront recreational site\./);
+
+  const toggledHtml = renderToStaticMarkup(
+    createElement(ListingCard, { listing, show: { remarks: false } }),
+  );
+  assert.doesNotMatch(toggledHtml, /Great riverfront recreational site\./);
 
   const loadingHtml = renderToStaticMarkup(
     createElement(ListingGrid, { listings: [], loading: true, loadingContent: 'Loading…' }),
@@ -61,9 +77,14 @@ test('vue ListingCard/ListingGrid render via SSR with no stray class="" attrs', 
   const cardHtml = await renderToString(cardApp);
   assert.match(cardHtml, /class="card"/);
   assert.match(cardHtml, /\$425,000/);
+  assert.match(cardHtml, /Great riverfront recreational site\./);
   // Parts with no classNames override must not emit empty class/style attrs.
   assert.doesNotMatch(cardHtml, /class=""/);
   assert.doesNotMatch(cardHtml, /style=""/);
+
+  const toggledApp = createSSRApp({ render: () => h(ListingCard, { listing, show: { remarks: false } }) });
+  const toggledHtml = await renderToString(toggledApp);
+  assert.doesNotMatch(toggledHtml, /Great riverfront recreational site\./);
 
   const gridApp = createSSRApp({ render: () => h(ListingGrid, { listings: [listing] }) });
   const gridHtml = await renderToString(gridApp);

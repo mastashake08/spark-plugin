@@ -73,9 +73,19 @@ export interface SparkListingFields extends Record<string, unknown> {
   StateOrProvince?: string;
   PostalCode?: string;
   UnparsedAddress?: string;
+  /** RESO Data Dictionary field names. Some Spark MLSs report these instead of the `Beds`/`Baths`/`BuildingArea` fields below — `defaultFormatMeta` checks both. */
   BedroomsTotal?: number;
   BathroomsTotalInteger?: number;
   LivingArea?: number;
+  /** Field names confirmed on a live Spark Platform response (see CLAUDE.md) — more common than the RESO names above across Spark MLSs. */
+  BedsTotal?: number;
+  BathsTotal?: number;
+  BathsFull?: number;
+  BathsHalf?: number;
+  BuildingAreaTotal?: number;
+  PublicRemarks?: string;
+  YearBuilt?: number;
+  PropertySubType?: string;
   PhotoCount?: number;
   ModificationTimestamp?: string;
 }

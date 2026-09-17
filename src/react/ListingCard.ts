@@ -3,8 +3,10 @@ import {
   defaultFormatAddress,
   defaultFormatMeta,
   defaultFormatPrice,
+  defaultFormatRemarks,
   joinClassNames,
   type ListingCardPart,
+  type ListingCardVisibility,
 } from '../core/format.js';
 import type { SparkListingFields, SparkResource } from '../core/types.js';
 
@@ -20,9 +22,12 @@ export interface ListingCardProps<Fields extends Record<string, unknown> = Spark
   /** Per-part class overrides. No classes are applied unless you pass them — this component ships unstyled. */
   classNames?: Partial<Record<ListingCardPart, string>>;
   styles?: Partial<Record<ListingCardPart, CSSProperties>>;
+  /** Toggle which parts render, e.g. `{ remarks: false }`. Omitted parts default to shown. */
+  show?: ListingCardVisibility;
   formatPrice?: (price: unknown) => string;
   formatAddress?: (fields: Fields) => string;
   formatMeta?: (fields: Fields) => string;
+  formatRemarks?: (fields: Fields) => string;
 }
 
 export function ListingCard<Fields extends Record<string, unknown> = SparkListingFields>({
@@ -33,9 +38,11 @@ export function ListingCard<Fields extends Record<string, unknown> = SparkListin
   style,
   classNames = {},
   styles = {},
+  show = {},
   formatPrice = defaultFormatPrice,
   formatAddress = defaultFormatAddress as (fields: Fields) => string,
   formatMeta = defaultFormatMeta as (fields: Fields) => string,
+  formatRemarks = defaultFormatRemarks as (fields: Fields) => string,
 }: ListingCardProps<Fields>): ReactNode {
   const f = listing.StandardFields;
   const status = f.StandardStatus as string | undefined;
@@ -44,22 +51,37 @@ export function ListingCard<Fields extends Record<string, unknown> = SparkListin
     'div',
     { className: joinClassNames(classNames.root, className), style: { ...styles.root, ...style } },
     [
-      status
+      status && show.status !== false
         ? createElement('span', { key: 'status', className: classNames.status, style: styles.status }, status)
         : null,
-      photoUrl
-        ? createElement('img', {
-            key: 'photo',
-            className: classNames.photo,
-            style: styles.photo,
-            src: photoUrl,
-            alt: photoAlt ?? formatAddress(f),
-          })
-        : createElement('div', { key: 'photo-placeholder', className: classNames.photoPlaceholder, style: styles.photoPlaceholder }),
+      show.photo !== false
+        ? photoUrl
+          ? createElement('img', {
+              key: 'photo',
+              className: classNames.photo,
+              style: styles.photo,
+              src: photoUrl,
+              alt: photoAlt ?? formatAddress(f),
+            })
+          : createElement('div', {
+              key: 'photo-placeholder',
+              className: classNames.photoPlaceholder,
+              style: styles.photoPlaceholder,
+            })
+        : null,
       createElement('div', { key: 'body', className: classNames.body, style: styles.body }, [
-        createElement('div', { key: 'price', className: classNames.price, style: styles.price }, formatPrice(f.ListPrice)),
-        createElement('div', { key: 'address', className: classNames.address, style: styles.address }, formatAddress(f)),
-        createElement('div', { key: 'meta', className: classNames.meta, style: styles.meta }, formatMeta(f)),
+        show.price !== false
+          ? createElement('div', { key: 'price', className: classNames.price, style: styles.price }, formatPrice(f.ListPrice))
+          : null,
+        show.address !== false
+          ? createElement('div', { key: 'address', className: classNames.address, style: styles.address }, formatAddress(f))
+          : null,
+        show.meta !== false
+          ? createElement('div', { key: 'meta', className: classNames.meta, style: styles.meta }, formatMeta(f))
+          : null,
+        show.remarks !== false
+          ? createElement('div', { key: 'remarks', className: classNames.remarks, style: styles.remarks }, formatRemarks(f))
+          : null,
       ]),
     ],
   );
