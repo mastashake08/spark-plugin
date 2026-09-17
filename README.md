@@ -129,6 +129,80 @@ export function ListingSearch() {
 }
 ```
 
+## Listing components (optional)
+
+Each entry point also ships a `ListingCard` and `ListingGrid` — unstyled by default. No CSS is included; you either
+target the parts with your own classes/Tailwind, or theme it however you like. Every part (`root`, `photo`,
+`photoPlaceholder`, `body`, `price`, `address`, `meta`, `status`) can be targeted independently via `classNames` (and
+`styles` in Vue/React, for inline styles).
+
+**React:**
+
+```tsx
+import { ListingCard, ListingGrid, useSparkListings } from 'spark-mls-client/react';
+
+function Results() {
+  const { data, loading, error } = useSparkListings({ filter: "StandardStatus Eq 'Active'", limit: 25 });
+
+  return (
+    <ListingGrid
+      listings={data?.results ?? []}
+      loading={loading}
+      error={error}
+      className="listing-grid"
+      cardProps={{ classNames: { root: 'listing-card', price: 'listing-card__price' } }}
+      loadingContent={<p>Loading…</p>}
+      errorContent={(err) => <p>{err.message}</p>}
+      emptyContent={<p>No listings found.</p>}
+    />
+  );
+}
+```
+
+Or use `ListingCard` on its own, e.g. inside a listing detail page: `<ListingCard listing={listing} photoUrl={photos[0]?.Uri800} className="listing-card" />`.
+
+**Vue:**
+
+```vue
+<script setup lang="ts">
+import { ListingGrid } from 'spark-mls-client/vue';
+import { useSparkListings } from 'spark-mls-client/vue';
+
+const { data, loading, error } = useSparkListings({ filter: "StandardStatus Eq 'Active'", limit: 25 });
+</script>
+
+<template>
+  <ListingGrid
+    :listings="data?.results ?? []"
+    :loading="loading"
+    :error="error"
+    class="listing-grid"
+    :cardProps="{ classNames: { root: 'listing-card' } }"
+  >
+    <template #loading>Loading…</template>
+    <template #empty>No listings found.</template>
+  </ListingGrid>
+</template>
+```
+
+**Vanilla JavaScript** (builds real DOM elements — `spark-mls-client/vanilla`):
+
+```ts
+import { SparkClient } from 'spark-mls-client';
+import { renderListingGrid } from 'spark-mls-client/vanilla';
+
+const client = new SparkClient({ accessToken, userAgent: 'YourBrokerage IDX/1.0' });
+const { results } = await client.listings.search({ filter: "StandardStatus Eq 'Active'", limit: 25 });
+
+const grid = renderListingGrid(results, {
+  classNames: { root: 'listing-grid', grid: 'listing-grid__items' },
+  cardOptions: { classNames: { root: 'listing-card', price: 'listing-card__price' } },
+  emptyContent: 'No listings found.',
+});
+
+document.getElementById('app')!.appendChild(grid);
+```
+
 ## Typed fields
 
 `StandardFields` defaults to a small, commonly-used subset (`SparkListingFields`). Pass your own field set as a
@@ -148,8 +222,9 @@ results[0].StandardFields.ListOfficeName; // typed
 
 ```
 npm install
-npm run build      # emits dist/ (ESM + CJS + .d.ts) for the core, ./vue, and ./react entry points
+npm run build      # emits dist/ (ESM + CJS + .d.ts) for the core, ./vue, ./react, and ./vanilla entry points
 npm run typecheck
+npm test           # runs dist/ against real SSR/DOM rendering (rebuilds first via pretest)
 ```
 
 ## License

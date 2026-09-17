@@ -27,6 +27,11 @@
       "import": "./dist/react/index.js",
       "require": "./dist/react/index.cjs"
     },
+    "./vanilla": {
+      "types": "./dist/vanilla/index.d.ts",
+      "import": "./dist/vanilla/index.js",
+      "require": "./dist/vanilla/index.cjs"
+    },
     "./package.json": "./package.json"
   },
   "scripts": {
@@ -34,6 +39,8 @@
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
     "example": "node --env-file=.env examples/vanilla/run.mjs",
+    "pretest": "npm run build",
+    "test": "node --test",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
@@ -62,7 +69,9 @@
   "devDependencies": {
     "@types/node": "^20.14.0",
     "@types/react": "^18.3.0",
+    "jsdom": "^29.1.1",
     "react": "^18.3.0",
+    "react-dom": "^18.3.1",
     "tsup": "^8.2.0",
     "typescript": "^5.5.0",
     "vue": "^3.4.0"

@@ -6,24 +6,34 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```
 npm install         # install dependencies
-npm run build        # tsup: emits dist/ as ESM + CJS + .d.ts for all three entry points
+npm run build        # tsup: emits dist/ as ESM + CJS + .d.ts for all four entry points
 npm run dev           # tsup --watch
-npm run typecheck     # tsc --noEmit (no test suite exists yet)
+npm run typecheck     # tsc --noEmit
+npm test              # node --test; pretest rebuilds dist/ first — tests import from dist, not src
 ```
 
-There is no test runner configured yet. `npm run typecheck` is currently the only correctness gate — run it after any change to `src/`.
+`tests/components.test.mjs` uses `jsdom` (vanilla DOM) and SSR (`react-dom/server`, `vue/server-renderer`) to render the `ListingCard`/`ListingGrid` components for real and assert on the output HTML — not just type-check. It caught a real bug once (Vue emitting stray `class=""`/`style=""` when a part had no override — fixed via `src/vue/utils.ts`'s `partProps`), so prefer extending it over adding assertions elsewhere when touching the component-rendering code.
 
 Requires Node >= 18 (for global `fetch`). The dev machine may report an older Node in `node -v`; if `npm install`/`npm run build` warn with `EBADENGINE`, the commands still work but confirm the target Node version before assuming production behavior.
 
 ## Architecture
 
-This is `spark-mls-client`, an npm package wrapping the Spark Platform (Flexmls) MLS/IDX API, published as a single package with three subpath entry points defined in `tsup.config.ts` and mirrored in `package.json#exports`:
+This is `spark-mls-client`, an npm package wrapping the Spark Platform (Flexmls) MLS/IDX API, published as a single package with four subpath entry points defined in `tsup.config.ts` and mirrored in `package.json#exports`:
 
-- `spark-mls-client` → `src/index.ts` — framework-agnostic core
-- `spark-mls-client/vue` → `src/vue/index.ts` — Vue 3 plugin + composables
-- `spark-mls-client/react` → `src/react/index.ts` — React context + hooks
+- `spark-mls-client` → `src/index.ts` — framework-agnostic core (`SparkClient` + types), safe to import in Node (no DOM)
+- `spark-mls-client/vue` → `src/vue/index.ts` — Vue 3 plugin, composables, `ListingCard`/`ListingGrid`
+- `spark-mls-client/react` → `src/react/index.ts` — React context, hooks, `ListingCard`/`ListingGrid`
+- `spark-mls-client/vanilla` → `src/vanilla/index.ts` — `renderListingCard`/`renderListingGrid` returning real `HTMLElement`s (browser-only; references `document`)
 
-`vue` and `react` are `external` in `tsup.config.ts` and `peerDependencies` (both `optional: true` in `peerDependenciesMeta`) — a consumer only needs to install whichever framework they actually import.
+`vue` and `react` are `external` in `tsup.config.ts` and `peerDependencies` (both `optional: true` in `peerDependenciesMeta`) — a consumer only needs to install whichever framework they actually import. This is also why DOM-touching code lives under `vanilla/`, not the root entry — the root package must stay importable from a Node backend with no `document` global.
+
+### Listing components (`ListingCard`/`ListingGrid`, all three UI entry points)
+
+Unstyled by design — no CSS ships with the package. Each ships a `classNames` (and, in Vue/React, `styles`) prop keyed by the shared `ListingCardPart` union (`src/core/format.ts`: `root`, `photo`, `photoPlaceholder`, `body`, `price`, `address`, `meta`, `status`) so consumers target only the parts they want to style. Formatting (`defaultFormatPrice`/`defaultFormatAddress`/`defaultFormatMeta` in `src/core/format.ts`) is shared across all three implementations and overridable per-instance via `formatPrice`/`formatAddress`/`formatMeta` props — keep new formatting logic there rather than duplicating it per framework.
+
+Keep the three implementations in lockstep when changing one: same part keys, same default formatting, same prop names where the framework allows it (React is generic over `Fields`; Vue's `ListingCard` isn't — `defineComponent` can't do that cleanly outside `<script setup generic="...">`, so it's typed to `SparkListingFields` and accepts wider shapes structurally). `ListingGrid` in each framework is presentation-only — it takes `listings`/`loading`/`error` as props/slots rather than fetching data itself, composing with `useSparkListings` instead of duplicating its logic.
+
+Vue's `h()` renders an empty `class=""`/`style=""` attribute in SSR output if you pass `class: undefined` explicitly (confirmed via `tests/components.test.mjs`), rather than omitting the attribute like omitting the prop key does. Always build Vue element props through `partProps()` (`src/vue/utils.ts`) instead of inlining `{ class: ..., style: ... }` literals.
 
 ### Core client (`src/core/`)
 
