@@ -16,6 +16,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
   root: 'examples/web',
   envDir: __dirname,
+  // Set by the GitHub Pages workflow to '/<repo>/' for project-page hosting;
+  // defaults to '/' for local dev (`npm run example:web`).
+  base: process.env.VITE_BASE_PATH || '/',
   resolve: {
     alias: [
       { find: 'spark-mls-client/react', replacement: resolve(__dirname, 'dist/react/index.js') },
@@ -23,6 +26,18 @@ export default defineConfig({
       { find: 'spark-mls-client/vanilla', replacement: resolve(__dirname, 'dist/vanilla/index.js') },
       { find: 'spark-mls-client', replacement: resolve(__dirname, 'dist/index.js') },
     ],
+  },
+  build: {
+    outDir: resolve(__dirname, 'examples/web/dist'),
+    emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        index: resolve(__dirname, 'examples/web/index.html'),
+        react: resolve(__dirname, 'examples/web/react.html'),
+        vue: resolve(__dirname, 'examples/web/vue.html'),
+        vanilla: resolve(__dirname, 'examples/web/vanilla.html'),
+      },
+    },
   },
   server: { port: 5173 },
 });

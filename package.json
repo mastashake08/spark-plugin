@@ -41,6 +41,8 @@
     "example": "node --env-file=.env examples/vanilla/run.mjs",
     "preexample:web": "npm run build",
     "example:web": "vite",
+    "prepages:build": "npm run build",
+    "pages:build": "vite build",
     "pretest": "npm run build",
     "test": "node --test",
     "prepublishOnly": "npm run build"
