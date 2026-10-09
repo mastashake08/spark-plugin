@@ -8,6 +8,8 @@ import type {
   SparkMediaFields,
   SparkOpenHouseFields,
   SparkPage,
+  SparkPagination,
+  SparkRawPagination,
   SparkResource,
 } from './types.js';
 
@@ -18,7 +20,7 @@ export interface SparkClientOptions {
    * <accessToken>` on every request.
    */
   accessToken: string;
-  /** Defaults to Spark's standard v1 endpoint. Use the replication host if your account is provisioned for it. */
+  /** Defaults to `https://replication.sparkapi.com/v1/` — IDX feed keys are refused on the standard `sparkapi.com` host. */
   baseUrl?: string;
   /** Identifies your application to Spark, e.g. `"YourBrokerage IDX/1.0"`. Required by the API. */
   userAgent: string;
@@ -36,6 +38,11 @@ function mergeFilters(base: string, extra?: string | string[]): string | string[
   return Array.isArray(extra) ? [base, ...extra] : [base, extra];
 }
 
+function toPagination(raw: SparkRawPagination | undefined): SparkPagination | undefined {
+  if (!raw) return undefined;
+  return { currentPage: raw.CurrentPage, totalPages: raw.TotalPages, totalRows: raw.TotalRows };
+}
+
 function listParamsToQuery(params: SparkListParams = {}): RequestOptions['query'] {
   const filter = Array.isArray(params.filter)
     ? params.filter.map((clause) => `(${clause})`).join(' And ')
@@ -48,6 +55,8 @@ function listParamsToQuery(params: SparkListParams = {}): RequestOptions['query'
     _orderby: params.orderBy,
     _limit: params.limit,
     _page: params.page,
+    // Spark omits D.Pagination unless asked for it.
+    _pagination: 1,
     ...params.extra,
   };
 }
@@ -112,7 +121,7 @@ export class SparkClient {
     });
     return {
       results: envelope.D.Results ?? [],
-      pagination: envelope.D.Pagination,
+      pagination: toPagination(envelope.D.Pagination),
       requestId: envelope.D.RequestId,
     };
   }
@@ -128,7 +137,7 @@ export class SparkClient {
     });
     return {
       results: envelope.D.Results ?? [],
-      pagination: envelope.D.Pagination,
+      pagination: toPagination(envelope.D.Pagination),
       requestId: envelope.D.RequestId,
     };
   }

@@ -3,9 +3,10 @@ import type { SparkListParams, SparkListingFields, SparkPage, SparkResource } fr
 /**
  * The minimal shape `useSparkListings`/`useSparkListing`/`SparkProvider`/
  * `createSparkPlugin` actually need. Both `SparkClient` (talks to Spark
- * directly, server-only) and `SparkProxyClient` (talks to your own backend,
- * browser-safe) satisfy this — pass whichever is appropriate for where your
- * code runs.
+ * directly, server-only), `ParagonClient` (talks to a Paragon RETS
+ * server directly, server-only, via its Spark-shaped `listings` adapter) and
+ * `SparkProxyClient` (talks to your own backend, browser-safe) satisfy this —
+ * pass whichever is appropriate for where your code runs.
  */
 export interface SparkListingsClient {
   listings: {

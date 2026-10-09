@@ -1,7 +1,8 @@
 # spark-mls-client
 
-A JavaScript/TypeScript client for the [Spark Platform](https://sparkplatform.com/) (Flexmls) MLS/IDX API, with a
-framework-agnostic core plus optional Vue 3 and React bindings.
+A JavaScript/TypeScript client for the [Spark Platform](https://sparkplatform.com/) (Flexmls) MLS/IDX API and
+[Paragon RETS](#paragon-rets) (ICE) feeds, with a framework-agnostic core plus optional Vue 3 and
+React bindings.
 
 ```
 npm install spark-mls-client
@@ -75,6 +76,84 @@ Spark directly and are written for brevity — they only work somewhere the toke
 React Server Component). For an actual client-rendered browser page, skip straight to
 [Web examples](#web-examples), which shows the real pattern: your backend calls Spark, the browser calls your
 backend.
+
+## Paragon RETS
+
+`ParagonClient` talks to a Paragon RETS 1.8 server (ICE, formerly Black Knight). This is what an MLS gives you when it
+approves an IDX feed with a **login URL, username and password**. For example, HKAR feeds come from the Kentucky MLS
+Alliance (`KMA`). The client logs in with HTTP Basic auth, keeps the RETS session cookie, logs in again once if the
+session expires, and parses Paragon's XML (COMPACT-DECODED) into plain records. Numeric fields are converted using the
+server's metadata, and empty values are dropped.
+
+Like `SparkClient`, it is **server-only**: the password must never reach a browser, and Paragon sends no CORS headers.
+Call `logout()` on shutdown, because Paragon may block users who leave too many sessions open.
+
+```ts
+import { ParagonClient, PARAGON_KMA_FIELD_MAP } from 'spark-mls-client';
+
+const client = new ParagonClient({
+  loginUrl: process.env.PARAGON_LOGIN_URL!, // https://kma-rets.paragonrels.com/rets/fnisrets.aspx/KMA/login
+  username: process.env.PARAGON_USERNAME!,
+  password: process.env.PARAGON_PASSWORD!,
+  fieldMap: PARAGON_KMA_FIELD_MAP,          // KMA's beds/baths/sqft/remarks columns (see below)
+});
+
+// Native RETS search: records keyed by Paragon system names (L_ListingID, L_AskingPrice, LM_Int1_6, ...).
+const page = await client.property.search({
+  class: 'RF_1',                                          // Residential/Farm (the default)
+  query: ['(L_StatusCatID=1)', '(L_AskingPrice=100000-300000)'], // DMQL2, joined with AND
+  limit: 25,
+  offset: 26,                                             // 1-based
+});
+page.count;    // total matches
+page.maxRows;  // true if the server capped the result set
+
+const listing = await client.property.get(1257881);   // tries every class
+const media = await client.property.media([1257881]); // photos ordered by MED_sequence (public CDN URLs)
+const agents = await client.agents.search({ limit: 50 });
+const offices = await client.offices.search({ limit: 50 });
+const statuses = await client.metadata('METADATA-LOOKUP_TYPE', 'Property:Status');
+await client.logout();
+```
+
+**Queries are DMQL2, not OData or Spark syntax.**
+- `(Field=value)` for equality, `(Field=100+)` and `(Field=100-)` for at least and at most, and `(Field=1,2,3)` for any
+  of several values.
+- Lookup fields are queried by their lookup *value*. For example, Active is `L_StatusCatID=1`; the decoded text
+  `'Active'` doesn't work.
+- DateTimes are UTC, both in queries (`(L_UpdateDate=2026-10-01T00:00:00Z+)`) and in results, which omit the `Z`.
+- Paragon RETS ignores `OrderBy`. Unknown fields throw `ParagonApiError` with `code: '20200'`. No matches returns an
+  empty page, not an error.
+
+Paragon only populates RESO standard names for a handful of fields, so `client.listings` adds Spark/RESO-style aliases
+from a `fieldMap`:
+- **`PARAGON_CORE_FIELD_MAP`** (always applied) covers Paragon's `L_*` columns, which are the same on every Paragon MLS:
+  `ListPrice`, `StandardStatus`, `City`, `PostalCode`, `Latitude`, and so on.
+- **`PARAGON_KMA_FIELD_MAP`** adds KMA's MLS-specific Residential columns: `BedroomsTotal` ← `LM_Int1_6`,
+  `BathroomsTotalInteger` ← `LM_Int1_5`, `LivingArea` ← `LM_Int4_6`, `PublicRemarks` ← `LR_remarks22`, and a few more.
+  For another MLS or class, look up the column names with `client.metadata('METADATA-TABLE', 'Property:RF_1')` and pass
+  your own map.
+
+`client.listings` is a Spark-shaped adapter:
+- Records come back as `{ Id: L_ListingID, StandardFields }`. `StandardFields` holds the raw fields, the aliases, and an
+  `UnparsedAddress` built from street, city, state and ZIP.
+- `pagination` comes from the RETS count.
+- `expand: 'Photos'` attaches `StandardFields.Photos` (`{ Uri, Order, Caption, ... }`) using one Media query per page.
+- Listings flagged **"Yes Without Address"** for IDX have their street address and map coordinates removed.
+
+That means a `ParagonClient` works with everything built for Spark: `SparkProvider`/`createSparkPlugin` (pass the
+client, or the raw `{ loginUrl, username, password }` options), `useSparkListings`/`useSparkListing`, and
+`ListingCard`/`ListingGrid`. Write `filter` in DMQL2. Put the client behind your backend, and the browser keeps using
+`SparkProxyClient` unchanged:
+
+```ts
+// backend route: GET /api/listings
+const page = await paragon.listings.search({ filter: '(L_StatusCatID=1)', limit: 24, page: Number(req.query.page ?? 1), expand: 'Photos' });
+res.json(page); // { results, pagination, requestId }
+
+// frontend (React): client is a SparkProxyClient pointed at /api
+<ListingGrid listings={data?.results ?? []} getPhotoUrl={(l) => l.StandardFields.Photos?.[0]?.Uri} />
+```
 
 ## Vue 3
 
@@ -264,7 +343,9 @@ results[0].StandardFields.ListOfficeName; // typed
 npm install
 npm run build      # emits dist/ (ESM + CJS + .d.ts) for the core, ./vue, ./react, and ./vanilla entry points
 npm run typecheck
-npm test           # runs dist/ against real SSR/DOM rendering (rebuilds first via pretest)
+npm test           # runs dist/ against real SSR/DOM rendering and mocked Spark/Paragon APIs (rebuilds first via pretest)
+npm run example         # live Spark API (needs SPARK_* in .env)
+npm run example:paragon # live Paragon RETS server (needs PARAGON_* in .env)
 ```
 
 ## License

@@ -6,9 +6,17 @@ export interface SparkEnvelope<T> {
     Code?: string;
     Errors?: Array<{ Message?: string; Code?: string; Field?: string }>;
     Results?: T;
-    Pagination?: SparkPagination;
+    Pagination?: SparkRawPagination;
     RequestId?: string;
   };
+}
+
+/** `D.Pagination` as Spark sends it — only present when the request includes `_pagination=1`. */
+export interface SparkRawPagination {
+  TotalRows: number;
+  PageSize: number;
+  CurrentPage: number;
+  TotalPages: number;
 }
 
 export interface SparkPagination {

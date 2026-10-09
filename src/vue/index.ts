@@ -1,15 +1,20 @@
 import { type App, type InjectionKey, inject, provide, ref, shallowRef, watchEffect } from 'vue';
 import { SparkClient, type SparkClientOptions } from '../core/client.js';
 import { SparkProxyClient, type SparkProxyClientOptions } from '../core/proxyClient.js';
+import { ParagonClient, type ParagonClientOptions } from '../core/paragonClient.js';
 import type { SparkListingsClient } from '../core/sparkClientLike.js';
-import { SparkApiError } from '../core/errors.js';
+import { SparkApiError, ParagonApiError } from '../core/errors.js';
 import type { SparkListParams, SparkListingFields, SparkPage, SparkResource } from '../core/types.js';
+
+/** Anything `SparkProvider`/`createSparkPlugin` accept: a built client, or options for one of the three built-in clients. */
+type SparkListingsClientInput = SparkListingsClient | SparkClientOptions | SparkProxyClientOptions | ParagonClientOptions;
 
 const SPARK_CLIENT_KEY: InjectionKey<SparkListingsClient> = Symbol('spark-client');
 
-function resolveClient(options: SparkListingsClient | SparkClientOptions | SparkProxyClientOptions): SparkListingsClient {
-  if (options instanceof SparkClient || options instanceof SparkProxyClient) return options;
+function resolveClient(options: SparkListingsClientInput): SparkListingsClient {
+  if (options instanceof SparkClient || options instanceof SparkProxyClient || options instanceof ParagonClient) return options;
   if ('listings' in options) return options;
+  if ('loginUrl' in options) return new ParagonClient(options);
   return 'accessToken' in options ? new SparkClient(options) : new SparkProxyClient(options);
 }
 
@@ -17,10 +22,11 @@ function resolveClient(options: SparkListingsClient | SparkClientOptions | Spark
  * Vue plugin: `app.use(createSparkPlugin({ accessToken, ... }))` makes the
  * client available to every component via `useSparkClient()`. Pass
  * `{ accessToken, ... }` (server-only — never render this in browser-shipped
- * code) or `{ baseUrl, ... }` for a browser-safe `SparkProxyClient` pointed
- * at your own backend, or an already-constructed client instance.
+ * code), `{ loginUrl, username, password }` for a `ParagonClient` (also
+ * server-only), `{ baseUrl, ... }` for a browser-safe `SparkProxyClient`
+ * pointed at your own backend, or an already-constructed client instance.
  */
-export function createSparkPlugin(options: SparkListingsClient | SparkClientOptions | SparkProxyClientOptions) {
+export function createSparkPlugin(options: SparkListingsClientInput) {
   const client = resolveClient(options);
   return {
     install(app: App) {
@@ -113,7 +119,10 @@ export { ListingCard } from './ListingCard.js';
 export { ListingGrid } from './ListingGrid.js';
 export type { ListingCardPart, ListingCardVisibility } from '../core/format.js';
 
-export { SparkClient, SparkProxyClient, SparkApiError };
+export { SparkClient, SparkProxyClient, ParagonClient, SparkApiError, ParagonApiError };
+export type { ParagonClientOptions } from '../core/paragonClient.js';
+export type { ParagonSearchParams, ParagonPage, ParagonListingFields, ParagonRecord, ParagonFieldMap } from '../core/paragonTypes.js';
+export { PARAGON_CORE_FIELD_MAP, PARAGON_KMA_FIELD_MAP } from '../core/paragonClient.js';
 export type { SparkClientOptions } from '../core/client.js';
 export type { SparkProxyClientOptions } from '../core/proxyClient.js';
 export type { SparkListingsClient } from '../core/sparkClientLike.js';

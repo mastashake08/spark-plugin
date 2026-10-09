@@ -1,7 +1,7 @@
 {
   "name": "spark-mls-client",
-  "version": "1.1.1",
-  "description": "JavaScript/TypeScript client for the Spark Platform (Flexmls) MLS/IDX API, with optional Vue and React bindings.",
+  "version": "2.0.0",
+  "description": "JavaScript/TypeScript client for the Spark Platform (Flexmls) MLS/IDX API and Paragon RETS feeds, with optional Vue and React bindings.",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -47,6 +47,7 @@
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
     "example": "node --env-file=.env examples/vanilla/run.mjs",
+    "example:paragon": "node --env-file=.env examples/vanilla/paragon.mjs",
     "preexample:web": "npm run build",
     "example:web": "vite",
     "prepages:build": "npm run build",
@@ -63,6 +64,8 @@
     "idx",
     "real-estate",
     "reso",
+    "paragon",
+    "rets",
     "vue",
     "react"
   ],

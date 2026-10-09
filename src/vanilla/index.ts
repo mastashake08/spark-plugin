@@ -130,10 +130,12 @@ export function renderListingGrid<Fields extends Record<string, unknown> = Spark
 }
 
 export type { ListingCardPart, ListingCardVisibility } from '../core/format.js';
-export { SparkClient, SparkProxyClient, SparkApiError } from '../index.js';
+export { SparkClient, SparkProxyClient, ParagonClient, SparkApiError, ParagonApiError, PARAGON_KMA_FIELD_MAP } from '../index.js';
 export type {
   SparkClientOptions,
   SparkProxyClientOptions,
+  ParagonClientOptions,
+  ParagonListingFields,
   SparkListingsClient,
   SparkListingFields,
   SparkPage,

@@ -32,3 +32,16 @@ export class SparkApiError extends Error {
     this.requestId = options.requestId;
   }
 }
+
+/**
+ * Thrown by `ParagonClient` for login, transport, and RETS reply-code failures
+ * (`code` is the RETS ReplyCode, e.g. `'20200'` for an unknown query field).
+ * Extends `SparkApiError` so `instanceof SparkApiError` checks and the
+ * hooks' `error` typing work unchanged whichever client you use.
+ */
+export class ParagonApiError extends SparkApiError {
+  constructor(message: string, options: ConstructorParameters<typeof SparkApiError>[1]) {
+    super(message, options);
+    this.name = 'ParagonApiError';
+  }
+}

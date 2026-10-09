@@ -1,9 +1,13 @@
 import { createContext, createElement, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { SparkClient, type SparkClientOptions } from '../core/client.js';
 import { SparkProxyClient, type SparkProxyClientOptions } from '../core/proxyClient.js';
+import { ParagonClient, type ParagonClientOptions } from '../core/paragonClient.js';
 import type { SparkListingsClient } from '../core/sparkClientLike.js';
-import { SparkApiError } from '../core/errors.js';
+import { SparkApiError, ParagonApiError } from '../core/errors.js';
 import type { SparkListParams, SparkListingFields, SparkPage, SparkResource } from '../core/types.js';
+
+/** Anything `SparkProvider`/`createSparkPlugin` accept: a built client, or options for one of the three built-in clients. */
+type SparkListingsClientInput = SparkListingsClient | SparkClientOptions | SparkProxyClientOptions | ParagonClientOptions;
 
 const SparkContext = createContext<SparkListingsClient | null>(null);
 
@@ -12,16 +16,18 @@ export interface SparkProviderProps {
    * A `SparkClient` (server-only — never render this in browser-shipped
    * code) or a `SparkProxyClient` (browser-safe, points at your own
    * backend). Plain options objects are also accepted and constructed for
-   * you, distinguished by shape: `{ accessToken, ... }` builds a
-   * `SparkClient`, `{ baseUrl, ... }` builds a `SparkProxyClient`.
+   * you, distinguished by shape: `{ loginUrl, username, password }` builds a
+   * `ParagonClient` (server-only, like `SparkClient`), `{ accessToken, ... }`
+   * builds a `SparkClient`, `{ baseUrl, ... }` builds a `SparkProxyClient`.
    */
-  client: SparkListingsClient | SparkClientOptions | SparkProxyClientOptions;
+  client: SparkListingsClientInput;
   children?: ReactNode;
 }
 
-function resolveClient(client: SparkListingsClient | SparkClientOptions | SparkProxyClientOptions): SparkListingsClient {
-  if (client instanceof SparkClient || client instanceof SparkProxyClient) return client;
+function resolveClient(client: SparkListingsClientInput): SparkListingsClient {
+  if (client instanceof SparkClient || client instanceof SparkProxyClient || client instanceof ParagonClient) return client;
   if ('listings' in client) return client;
+  if ('loginUrl' in client) return new ParagonClient(client);
   return 'accessToken' in client ? new SparkClient(client) : new SparkProxyClient(client);
 }
 
@@ -128,7 +134,10 @@ export { ListingCard, type ListingCardProps } from './ListingCard.js';
 export { ListingGrid, type ListingGridProps } from './ListingGrid.js';
 export type { ListingCardPart, ListingCardVisibility } from '../core/format.js';
 
-export { SparkClient, SparkProxyClient, SparkApiError };
+export { SparkClient, SparkProxyClient, ParagonClient, SparkApiError, ParagonApiError };
+export type { ParagonClientOptions } from '../core/paragonClient.js';
+export type { ParagonSearchParams, ParagonPage, ParagonListingFields, ParagonRecord, ParagonFieldMap } from '../core/paragonTypes.js';
+export { PARAGON_CORE_FIELD_MAP, PARAGON_KMA_FIELD_MAP } from '../core/paragonClient.js';
 export type { SparkClientOptions } from '../core/client.js';
 export type { SparkProxyClientOptions } from '../core/proxyClient.js';
 export type { SparkListingsClient } from '../core/sparkClientLike.js';
